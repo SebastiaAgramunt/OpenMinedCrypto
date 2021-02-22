@@ -228,3 +228,44 @@ def GeneratePrimeGeneratorPair(size: int=256):
                 break
         if Found:
             return p, g
+
+def binary(x: int, pre: str='0b', length: int=8):
+    """
+    Return the binary representation of integer x
+    Input:
+        x: an integer of any size
+        pre: the prefix for the output string, default 0b
+        length: length of the output in binary if its representation has smaller length
+                default is 8 i,e, 2**8=256 int, a byte
+    Return:
+        The binary representation of integer x with a minimum lenght of "length"
+        padded with trailing 0s
+    """
+    return '{0}{{:{1}>{2}}}'.format(pre, 0, length).format(bin(x)[2:])
+
+
+def hexadecimal(x: int, pre: str='0x', length: int=2):
+    """
+    Return the hexadecimal representation of integer x
+    Input:
+        x: an integer of any size
+        pre: the prefix for the output string, default 0x
+        length: length of the output in hexadecimal if its representation has smaller length
+                default is 2 i,e, 16**2=256 int, a byte
+    Return:
+        The hexadecimal representation of integer x with a minimum lenght of "length"
+        padded with trailing 0s
+    """
+    return '{0}{{:{1}>{2}}}'.format(pre, 0, length).format(hex(x)[2:])
+
+
+def bytes_to_bin(x: bytes, pre: str='0b'):
+    # convert a bytes string to its binary form
+    assert isinstance(x, bytes), f"{x} is type {type(x)} and must be bytes"
+    return pre + "".join([binary(n, pre="") for n in x])
+
+
+def bytes_to_hex(x: bytes, pre: str='0x'):
+    # convert a bytes string to its hexadecimal form
+    assert isinstance(x, bytes), f"{x} is type {type(x)} and must be bytes"
+    return pre + "".join([hexadecimal(n, pre="") for n in x])
