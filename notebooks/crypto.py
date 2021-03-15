@@ -269,3 +269,214 @@ def bytes_to_hex(x: bytes, pre: str='0x'):
     # convert a bytes string to its hexadecimal form
     assert isinstance(x, bytes), f"{x} is type {type(x)} and must be bytes"
     return pre + "".join([hexadecimal(n, pre="") for n in x])
+
+
+def xgcd(a, b):
+    # Solving equation au+bv=gcd(a,b)
+    # result is: (g,u,v) where g is greatest common divisor and u,v the solution of the eq above
+    u0, u1, v0, v1 = 0, 1, 1, 0
+    while a != 0:
+        q, b, a = b // a, a, b % a
+        v0, v1 = v1, v0 - q * v1
+        u0, u1 = u1, u0 - q * u1
+    return b, u0, v0
+
+
+def LCM(a: int, b: int):
+    '''
+    Computes the least common multiple of two integers
+    Input:
+        a: integer
+        b: integer
+    Output:
+        least common multiple
+    '''
+    g, _, _ = xgcd(a, b)
+
+    return a*b//g
+
+
+def InverseMod(a: int, m: int) -> int:
+    """
+    Given natural number a and m returns b = a^{-1}(mod m). The inverse modulo m of a.
+    This is b*a (mod p )=1
+    Input:
+        a: an integer element of the field (1 < a < m)
+        m: an integer
+    Output:
+        b: The inverse modulo m of a
+    e.g.
+    a = 10
+    m = 7
+    inv_a = InverseMod(a,m)
+    print("inverse of {} in modulo {} is {}\na*inv_a = {}".format(a,m,inv_a,a*inv_a%m))
+    """
+    g, u, _ = xgcd(a,m)
+    if g!=1:
+        #print("{} has no inverse on modulo {}".format(a,m))
+        return None
+    return u%m
+
+def RSAKeyGenerator(size_bits: int=16) -> (Tuple[int, int], Tuple[int, int]):
+    '''
+    RSA key generation. Generates public and
+    private keys in RSA protocol
+    Input:
+        size_bits: size in bits of the field
+    Output:
+        PublicKey: (N, e)
+        PrivateKey: (N, d)
+    '''
+
+    # Generate two random primes of n bits
+    p = RandomPrime(size_bits, m=40)
+    q = RandomPrime(size_bits, m=40)
+
+    # p and q must be different primes
+    while p==q:
+        q = RandomPrime(size_bits, m=40)  
+
+    N = p*q
+    phi = (p - 1)*(q - 1)
+    
+    while True:
+        e = randrange(2, phi - 1)
+        g, _, _ = xgcd(e, phi)
+        if g==1:
+            d = InverseMod(e, phi)
+            # return public and private keys
+            return (N, e), (N, d)
+
+def RSAEncrypt(m: int, PublicKey: Tuple[int]) -> int:
+    '''
+    Encrypts a message m using the RSA public key
+    Input:
+        m: message (An integer message)
+        PublicKey: A tuple (N, e)
+    Returns:
+        c: Encrypted message
+    '''
+    N, e = PublicKey[0], PublicKey[1]
+    return pow(m, e, N)
+
+def RSADecrypt(c: int, PrivateKey: Tuple[int]) -> int:
+    '''
+    Decrcypts the ciphertext c using the private key
+    Input:
+        c: Encrypted message
+        PrivateKey: A tuple (N, d)
+    Returns:
+        m: Decrypted message
+    '''
+    N, d = PrivateKey[0], PrivateKey[1]
+    return pow(c, d, N)
+
+
+# Auxiliar function for Paillier
+def _L(x, n):
+    return (x-1)//n
+
+def PaillierKeyGenerator(size: int = 64):
+    '''
+    Implementation of Paillier Cryptosystem
+    This function generates p                                                                                                                                                                                                                                                                                                                        .
+    ublic and private keys
+    Input:
+        size: size in bits of the field
+    Output:
+        PublicKey: (n, g)
+        PrivateKey: (n, l, mu)
+    '''
+    
+    gcd = 2
+    while gcd!=1:
+        p = RandomPrime(size, 40)
+        q = RandomPrime(size, 40)
+        N = p*q
+
+        gcd, _, _ = xgcd(N, (p-1)*(q-1))
+
+        if gcd==1:
+            l = LCM(p-1, q-1)
+            nsq = N*N
+            g = randrange(1, nsq)
+            mu = InverseMod(_L(pow(g, l, nsq), N), N)
+
+    return (N, g), (N, l, mu)
+
+def PaillierEncrypt(m: int, PublicKey: Tuple[int]):
+    '''
+    Encrypts a message m using the Paillier public key
+    Input:
+        m: message (An integer message) (mod n)
+        PublicKey: A tuple (N, g)
+    Output:
+        c: Encrypted message
+    '''
+    N, g = PublicKey[0], PublicKey[1]
+    gcd = 2
+    while gcd!=1:
+        r = randrange(1, N)
+        gcd, _, _ = xgcd(r, N)
+
+    return pow(g, m, N*N)*pow(r, N, N*N)%(N*N)
+
+
+def PaillierDecrypt(c: int, PrivateKey: Tuple[int]):
+    '''
+    Decrypts a ciphertext m using the Paillier private key
+    Input:
+        m: message (An integer message) (mod n)
+        PublicKey: A tuple (n, l, mu)
+    Output:
+        m: Decrypted message
+    '''
+    N, l, mu = PrivateKey[0], PrivateKey[1], PrivateKey[2]
+    return _L(pow(c, l, N*N), N)*mu%N
+
+
+def ElGamalKeyGenerator(size: int = 64):
+    '''
+    Implementation of El Gamal Cryptosystem
+    This function generates plublic and private keys
+    Input:
+        size: size in bits of the field
+    Output:
+        PublicKey: (A, g, p)
+        PrivateKey: (sk, p)
+    '''
+    p, g = GeneratePrimeGeneratorPair(size)
+    sk = randrange(2, p-1)
+    A = pow(g, sk, p)
+
+    # Return public key and private key
+    return (A, g, p), (sk, p)
+
+def ElGamalEncrypt(m: int, PublicKey: Tuple[int]):
+    '''
+    Encrypts a message m using the ElGamal public key
+    Input:
+        m: message (An integer message) (mod p)
+        PublicKey: A tuple (A, g, p)
+    Output:
+        c: tuple (c1, c2) encrypted message 
+    '''
+    A, g, p = PublicKey[0], PublicKey[1], PublicKey[2]
+    k = randrange(2, p-1)
+
+    return (pow(g, k, p), pow(A, k, p)*m%p)
+
+
+def ElGamalDecrypt(c: Tuple[int, int], PrivateKey: Tuple[int]):
+    '''
+    Decrypts a ciphertext m using the El Gamnal private key
+    Input:
+        c: tuple (c1, c2) the ciphertext of the message
+        PublicKey: A tuple (sk, p)
+    Output:
+        m: Decrypted message
+    '''
+    c1, c2 = c[0], c[1]
+    sk, p = PrivateKey[0], PrivateKey[1]
+    x = InverseFermat(pow(c1, sk, p), p)
+    return (x * c2)%p
